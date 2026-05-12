@@ -640,12 +640,15 @@ def main():
                     if block_event.time >= (global_clock) and block_event.time < (global_clock+mgp):
                         if len(LT.pool) > 82:
                             LT.calculateGas()
-                        if len(LT.pool_with_gas) > 0: # 如果交易池內還有交易可以包才包區塊
+                        if len(LT.pool_with_gas) > 0: # A block is mined only if there are still transactions available to be included in the transaction pool.
                             remain_trans = BlockCommit.generate_block(block_event, env.rsu_nodes_list, Statis)
+                            
                             print(f"Block ID: {block_event.block.id}, TX: {len(block_event.block.transactions)}")
                             print(f"remain_trans: {remain_trans}")
-                            if remain_trans is not None: # 如果該區塊事件非有效區塊，就不會有回傳值(remain_trans)
-                                trans_perform_his[block_event.block.id] = [None, None, None, None, None, None]
+
+                            if remain_trans is not None: 
+                                trans_perform_his[block_event.block.id] = [None, None, None, None, None, None, None]
+                                
                                 trans_perform_his[block_event.block.id][0] = len(block_event.block.transactions)
                                 trans_perform_his[block_event.block.id][1] = block_event.time - block_event.block.start_time
                                 trans_perform_his[block_event.block.id][2] = block_event.time - block_event.block.start_time
@@ -653,8 +656,23 @@ def main():
                                     trans_perform_his[block_event.block.id][0] / trans_perform_his[block_event.block.id][2]
                                 trans_perform_his[block_event.block.id][4] = block_event.time
                                 trans_perform_his[block_event.block.id][5] = len(env.vehicles)
+
+                                total_auth_time = 0
+                                for tx in block_event.block.transactions:
+                                    # block_event.time: Block is approved at this time 
+                                    # tx.timestamp: When the TX is in the pool at first 
+                                    auth_time = block_event.time - tx.timestamp
+                                    total_auth_time += auth_time
+                                
+                                # Authentication time (seconds) of the block 
+                                avg_block_auth_time = total_auth_time / len(block_event.block.transactions) if len(block_event.block.transactions) > 0 else 0
+                                
+                                trans_perform_his[block_event.block.id][6] = avg_block_auth_time 
+                                
                                 print(f"create_block")
-                                print(f"Block ID: {block_event.block.id}, block_event.time: {block_event.time}")
+
+                                print(f"Block ID: {block_event.block.id}, block_event.time: {block_event.time}, Average Auth Time: {round(avg_block_auth_time, 4)} seconds")
+
                         Queue.remove_event(block_event)
                     else: # global_clock 還沒走到 block_event.time
                         if env.sumo_step == var.stop_step-mgp: # 但已經是最後一個step了(block_event.time超過設定的模擬時間)
@@ -814,7 +832,8 @@ def main():
 
 
         # 統計每個區塊的performance
-        column_name_trans_perform = ['# Transactions', 'PoW Time', 'Block Latency', 'Block Throughput', 'Finish Timestamp', '# Vehicles']
+        # column_name_trans_perform = ['# Transactions', 'PoW Time', 'Block Latency', 'Block Throughput', 'Finish Timestamp', '# Vehicles']
+        column_name_trans_perform = ['# Transactions', 'PoW Time', 'Block Latency', 'Block Throughput', 'Finish Timestamp', '# Vehicles', 'Avg Block Auth Time (s)']
         df_trans_perform_his = pd.DataFrame.from_dict(trans_perform_his, orient = "index", columns = column_name_trans_perform)
         df_trans_perform_his.to_excel(writer_trans_perform, sheet_name = "Transactions(Block)_Performance")
         writer_trans_perform.close()
