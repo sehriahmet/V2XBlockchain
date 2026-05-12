@@ -881,7 +881,7 @@ class Environ:
             if self.method == 0:
                 # self.vehicle_time_id = var.train_sumo_step = 65
                 # self.vehicle_time_id = round(self.vehicle_time_id + 0.1, 1) # 取到小數點後一位
-                self.vehicle_time_id = round(self.vehicle_time_id + 0.5, 1) # 取到小數點後一位
+                self.vehicle_time_id = round(self.vehicle_time_id + 1.0, 1) # 取到小數點後一位 # It should add just 1 in here instead of 0.5 for my dataset. 
                 lst = self.df.loc[round(self.df['time'], 1) == self.vehicle_time_id] # self.df -> vehicle dataset
                 # if (self.df['time'] == self.vehicle_time_id).any():
                 #     print(f"vehicle time: {self.vehicle_time_id}")
@@ -908,11 +908,26 @@ class Environ:
                 print(f"# vehicles: {len(newcluster)}")
                 print(f"sumo_step: {self.sumo_step}")
 
+                # if (len(newcluster) <= 1):
+                #     # newcluster 就是 lat 的數量
+                #     # self.vehicles.clear()
+                #     continue
+                #     # break
+
+                # this part is changed in order to handle the error situations that when vehicle counts are not compiling with the simulation results. 
                 if (len(newcluster) <= 1):
-                    # newcluster 就是 lat 的數量
-                    # self.vehicles.clear()
-                    # continue
-                    break
+                # Less than 1 vehicle found here, skip this timeslot 
+                # try for next time step (e.g.: t=1.0s).
+                    print(f"Warning: Less than 1 vehicle found at t={self.sumo_step}s. Skipping to next step.")
+
+                    # If sumo_step is at the stop point break the loop. 
+                    if self.sumo_step >= var.stop_step:
+                        print("DURMA NOKTASINA ULAŞILDI.")
+                        break
+
+                    continue 
+                # end of changes
+
                 else:
                     # print(f"len(newcluster): {len(newcluster)}")
                     # self.renew_positions()
@@ -935,10 +950,15 @@ class Environ:
                         if var.sat_data == True:
                             lon, lat = self.get_Geo_coordinate(self.vehicle_time_id)
                         else:
-                            newsat = self.newsat.loc[self.newsat['step'] == self.vehicle_time_id]
-                            lon = newsat.iloc[0]['lon']
-                            lat = newsat.iloc[0]['lat']
-                            alt = newsat.iloc[0]['alt']
+                            # newsat = self.newsat.loc[self.newsat['step'] == self.vehicle_time_id]
+                            # lon = newsat.iloc[0]['lon']
+                            # lat = newsat.iloc[0]['lat']
+                            # alt = newsat.iloc[0]['alt']
+
+                            newsat_row = self.newsat.iloc[0] 
+                            lon = newsat_row['lon']
+                            lat = newsat_row['lat']
+                            alt = newsat_row['alt']
 
                         self.ST_position.append([lat, lon])
                     break
@@ -989,10 +1009,14 @@ class Environ:
                     if var.sat_data == True:
                         lon, lat = self.get_Geo_coordinate(self.vehicle_time_id)
                     else:
-                        newsat = self.newsat.loc[self.newsat['step'] == self.vehicle_time_id]
-                        lon = newsat.iloc[0]['lon']
-                        lat = newsat.iloc[0]['lat']
-                        alt = newsat.iloc[0]['alt']
+                        # newsat = self.newsat.loc[self.newsat['step'] == self.vehicle_time_id]
+                        # lon = newsat.iloc[0]['lon']
+                        # lat = newsat.iloc[0]['lat']
+                        # alt = newsat.iloc[0]['alt']
+                        newsat_row = self.newsat.iloc[0] 
+                        lon = newsat_row['lon']
+                        lat = newsat_row['lat']
+                        alt = newsat_row['alt']
 
                     self.ST_position.append([lat, lon])
 
@@ -3017,7 +3041,6 @@ class Environ:
 
         self.V2I_SINR_all = V2I_SINR
         self.V2V_SINR_all = V2V_SINR
-        self.V2S_SINR_all = V2S_SINR
         self.V2S_SINR_all = V2S_SINR
 
     def reset(self):
