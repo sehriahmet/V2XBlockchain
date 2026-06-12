@@ -4,10 +4,13 @@ mkdir -p output_random_seed
 # Define the arrays
 seeds=(20 42 67 168 1234)
 method="maxsinr"
-numbers=(100 200 300 400 500)
+# numbers=(100 200 300 400 500)
+numbers=(400)
 
 # Define the number of parallel jobs (threads)
 NUM_THREADS=16
+
+job_count=0
 
 # Create a function to run the Python command
 run_command() {

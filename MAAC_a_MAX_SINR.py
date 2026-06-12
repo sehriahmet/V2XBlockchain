@@ -640,12 +640,15 @@ def main():
                     if block_event.time >= (global_clock) and block_event.time < (global_clock+mgp):
                         if len(LT.pool) > 82:
                             LT.calculateGas()
-                        if len(LT.pool_with_gas) > 0: # 如果交易池內還有交易可以包才包區塊
+                        if len(LT.pool_with_gas) > 0: # A block is mined only if there are still transactions available to be included in the transaction pool.
                             remain_trans = BlockCommit.generate_block(block_event, env.rsu_nodes_list, Statis)
+                            
                             print(f"Block ID: {block_event.block.id}, TX: {len(block_event.block.transactions)}")
                             print(f"remain_trans: {remain_trans}")
-                            if remain_trans is not None: # 如果該區塊事件非有效區塊，就不會有回傳值(remain_trans)
-                                trans_perform_his[block_event.block.id] = [None, None, None, None, None, None]
+
+                            if remain_trans is not None:  
+                                trans_perform_his[block_event.block.id] = [None, None, None, None, None, None, None, None]
+                                
                                 trans_perform_his[block_event.block.id][0] = len(block_event.block.transactions)
                                 trans_perform_his[block_event.block.id][1] = block_event.time - block_event.block.start_time
                                 trans_perform_his[block_event.block.id][2] = block_event.time - block_event.block.start_time
@@ -653,8 +656,32 @@ def main():
                                     trans_perform_his[block_event.block.id][0] / trans_perform_his[block_event.block.id][2]
                                 trans_perform_his[block_event.block.id][4] = block_event.time
                                 trans_perform_his[block_event.block.id][5] = len(env.vehicles)
+
+                                total_auth_time = 0
+                                total_e2e_time = 0 
+                                
+                                for tx in block_event.block.transactions:
+                                    # block_event.time: block is authenticated this time 
+                                    # tx.timestamp: process is ended this time 
+                                    auth_time = block_event.time - tx.timestamp
+                                    total_auth_time += auth_time
+                                    
+                                    # E2E:
+                                    # message generated 
+                                    msg_generation_time = round(tx.timestamp - (tx.timestamp % mgp), 1)
+                                    e2e_time = block_event.time - msg_generation_time
+                                    total_e2e_time += e2e_time
+
+                                avg_block_auth_time = total_auth_time / len(block_event.block.transactions) if len(block_event.block.transactions) > 0 else 0
+                                avg_block_e2e_time = total_e2e_time / len(block_event.block.transactions) if len(block_event.block.transactions) > 0 else 0
+                                
+                                trans_perform_his[block_event.block.id][6] = avg_block_auth_time 
+                                trans_perform_his[block_event.block.id][7] = avg_block_e2e_time 
+                                
                                 print(f"create_block")
                                 print(f"Block ID: {block_event.block.id}, block_event.time: {block_event.time}")
+                                print(f"Average Auth Time: {round(avg_block_auth_time, 4)} s, Average E2E Latency: {round(avg_block_e2e_time, 4)} s")
+
                         Queue.remove_event(block_event)
                     else: # global_clock 還沒走到 block_event.time
                         if env.sumo_step == var.stop_step-mgp: # 但已經是最後一個step了(block_event.time超過設定的模擬時間)
@@ -796,10 +823,10 @@ def main():
 
         writer_veh_selection.close()
 
-        column_name_tx_number = ['# Transactions', '# Vehicles', 'TX Success Rate']
-        df_tx_number_his = pd.DataFrame.from_dict(tx_number_his, orient = "index", columns = column_name_tx_number)
-        df_tx_number_his.to_excel(writer_tx_number, sheet_name = "TX_Num_His")
-        writer_tx_number.close()
+        column_name_trans_perform = ['# Transactions', 'PoW Time', 'Block Latency', 'Block Throughput', 'Finish Timestamp', '# Vehicles', 'Avg Block Auth Time (s)', 'Avg E2E Latency (s)']
+        df_trans_perform_his = pd.DataFrame.from_dict(trans_perform_his, orient = "index", columns = column_name_trans_perform)
+        df_trans_perform_his.to_excel(writer_trans_perform, sheet_name = "Transactions(Block)_Performance")
+        writer_trans_perform.close()
 
         print(f"**********{label}**********")
 
@@ -814,8 +841,25 @@ def main():
 
 
         # 統計每個區塊的performance
-        column_name_trans_perform = ['# Transactions', 'PoW Time', 'Block Latency', 'Block Throughput', 'Finish Timestamp', '# Vehicles']
-        df_trans_perform_his = pd.DataFrame.from_dict(trans_perform_his, orient = "index", columns = column_name_trans_perform)
+        # column_name_trans_perform = ['# Transactions', 'PoW Time', 'Block Latency', 'Block Throughput', 'Finish Timestamp', '# Vehicles']
+        # column_name_trans_perform = ['# Transactions', 'PoW Time', 'Block Latency', 'Block Throughput', 'Finish Timestamp', '# Vehicles', 'Avg Block Auth Time (s)']
+        column_name_trans_perform = [
+            '# Transactions', 
+            'PoW Time', 
+            'Block Latency', 
+            'Block Throughput', 
+            'Finish Timestamp', 
+            '# Vehicles', 
+            'Avg Block Auth Time (s)', 
+            'Avg E2E Latency (s)' 
+        ]
+
+        # df_trans_perform_his = pd.DataFrame.from_dict(trans_perform_his, orient = "index", columns = column_name_trans_perform)
+        df_trans_perform_his = pd.DataFrame.from_dict(
+            trans_perform_his, 
+            orient="index", 
+            columns=column_name_trans_perform
+        )
         df_trans_perform_his.to_excel(writer_trans_perform, sheet_name = "Transactions(Block)_Performance")
         writer_trans_perform.close()
 
