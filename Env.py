@@ -470,14 +470,13 @@ class V2Schannels:
 #        water_oxy_attenuation = np.append( water_oxy_attenuation, water_oxy_at)
 
         ################# Total attenuation #######################
+        
+        rain_val = float(rain_at.value) if hasattr(rain_at, 'value') else float(rain_at)
+        cloud_val = float(cloud_at.value) if hasattr(cloud_at, 'value') else float(cloud_at)
+        
+        total_sum_at = rain_val + cloud_val
 
-        sum = rain_at.item()+cloud_at.item()
-
-
-        sum = float(np.asarray(re.findall(r"\d+\.\d+", str(sum.item()))))
-
-
-        total_at =   self.Sc_Loss + self.SF +sum
+        total_at = self.Sc_Loss + self.SF + total_sum_at
 
 
 
@@ -922,7 +921,7 @@ class Environ:
 
                     # If sumo_step is at the stop point break the loop. 
                     if self.sumo_step >= var.stop_step:
-                        print("DURMA NOKTASINA ULAŞILDI.")
+                        print("STOP POINT.")
                         break
 
                     continue 
@@ -2275,7 +2274,7 @@ class Environ:
 
                 self.demand_switch_V2I[i] = self.demand_all[i]
                 self.Data_rate_V2I_all[i] += V2I_Rate[i]
-                self.remain[i] = self.demand_all[i]
+                self.remain[i] = self.demand_all[i][0]
                 self.Data_rate_spacific[i] = V2I_Rate[i]
                 self.SNR_rate_spacific_V2I[i] = self.convert_W_to_dB(SNR[i])
 
@@ -2356,7 +2355,7 @@ class Environ:
 
                 self.demand_switch_V2V[i] = self.demand[i]
                 self.Data_rate_V2V_all[i] += V2V_Rate[i]
-                self.remain[i] = self.demand[i]
+                self.remain[i] = self.demand[i][0]
                 self.Data_rate_spacific[i] = V2V_Rate[i]
                 self.SNR_rate_spacific_V2V[i] = self.convert_W_to_dB(SNR[i])
 
@@ -2441,7 +2440,7 @@ class Environ:
 
                 self.demand_switch_V2S[i] = self.demand_s[i]
                 self.Data_rate_V2S_all[i] += V2S_Rate[i]
-                self.remain[i] = self.demand_s[i]
+                self.remain[i] = self.demand_s[i][0]
                 self.Data_rate_spacific[i] = V2S_Rate[i]
                 self.SNR_rate_spacific_V2S[i] = self.convert_W_to_dB(SNR[i])
 

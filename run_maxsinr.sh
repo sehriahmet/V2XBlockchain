@@ -5,7 +5,7 @@ mkdir -p output_random_seed
 seeds=(20 42 67 168 1234)
 method="maxsinr"
 # numbers=(100 200 300 400 500)
-numbers=(100)
+numbers=(400)
 
 # Define the number of parallel jobs (threads)
 NUM_THREADS=16
